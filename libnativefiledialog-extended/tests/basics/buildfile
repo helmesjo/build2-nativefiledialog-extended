@@ -1,0 +1,3 @@
+import libs = libnativefiledialog-extended%lib{nativefiledialog-extended}
+
+exe{driver}: {hxx ixx txx cxx}{**} $libs testscript{**}
