@@ -1,1 +1,1 @@
-../upstream/src/nfd_cocoa.m
+../../upstream/src/nfd_cocoa.m

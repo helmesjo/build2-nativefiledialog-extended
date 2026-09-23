@@ -1,1 +1,1 @@
-../upstream/src/nfd_gtk.cpp
+../../upstream/src/nfd_gtk.cpp
