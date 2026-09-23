@@ -1,6 +1,8 @@
 intf_libs = # Interface dependencies.
 impl_libs = # Implementation dependencies.
-#import xxxx_libs += libhello%lib{hello}
+
+# No third-party dependencies: the platform-specific backends below link
+# only system frameworks/libraries.
 
 # Public headers.
 #
@@ -10,11 +12,18 @@ include $pub
 
 pub_hdrs = $($pub/ pub_hdrs)
 
-lib{nativefiledialog-extended}: $pub/{$pub_hdrs}
+lib{nfd}: $pub/{$pub_hdrs}
 
-# Private headers and sources as well as dependencies.
+# Private headers and platform-specific sources.
 #
-lib{nativefiledialog-extended}: {hxx ixx txx cxx}{**} $impl_libs $intf_libs
+lib{nfd}: hxx{nfd_linux_shared}: include = ($cxx.target.class == 'linux')
+
+lib{nfd}: cxx{nfd_win}:    include = ($cxx.target.class == 'windows')
+lib{nfd}: cxx{nfd_gtk}:    include = ($cxx.target.class == 'linux' && !$config.libnativefiledialog_extended.portal)
+lib{nfd}: cxx{nfd_portal}: include = ($cxx.target.class == 'linux' &&  $config.libnativefiledialog_extended.portal)
+lib{nfd}: m{nfd_cocoa}:    include = ($cxx.target.class == 'macos')
+
+lib{nfd}: $impl_libs $intf_libs
 
 # Build options.
 #
@@ -25,29 +34,103 @@ src_pfx_src = [dir_path] $src_root/src/
 
 cxx.poptions =+ "-I$out_pfx_src" "-I$src_pfx_src" \
                 "-I$out_pfx_inc" "-I$src_pfx_inc"
+c.poptions   =+ "-I$out_pfx_src" "-I$src_pfx_src" \
+                "-I$out_pfx_inc" "-I$src_pfx_inc"
 
-#obja{*}: cxx.poptions += -DLIBNATIVEFILEDIALOG_EXTENDED_STATIC_BUILD
-#objs{*}: cxx.poptions += -DLIBNATIVEFILEDIALOG_EXTENDED_SHARED_BUILD
+# NFD has no C++/ObjC runtime requirements; disable exceptions and RTTI to
+# match upstream's own build (see upstream src/CMakeLists.txt).
+#
+if ($cxx.class == 'gcc' || $cxx.class == 'clang')
+{
+  cxx.coptions += -fno-exceptions -fno-rtti
+  c.coptions   += -fno-exceptions
+}
+elif ($cxx.class == 'msvc')
+  cxx.coptions += /EHs-c- /GR-
+
+# NFD provides its own symbol-export macros: NFD_EXPORT while building the
+# shared library, NFD_SHARED for its consumers (see include/nfd.h).
+#
+objs{*}: cxx.poptions += -DNFD_EXPORT
+objs{*}: c.poptions   += -DNFD_EXPORT
+
+if ($cxx.target.class == 'linux')
+{
+  # GTK3 (default) or D-Bus (xdg-desktop-portal), discovered via pkg-config
+  # since neither has a corresponding build2 package.
+  #
+  if $config.libnativefiledialog_extended.portal
+    nfd_pkg = dbus-1
+  else
+    nfd_pkg = gtk+-3.0
+
+  cxx.poptions += $process.run_regex(pkg-config --cflags $nfd_pkg, '(\S+)', '\1')
+  cxx.libs     += $process.run_regex(pkg-config --libs   $nfd_pkg, '(\S+)', '\1')
+
+  # Support X11 window handles for setting the dialog's parent window.
+  #
+  cxx.poptions += -DNFD_X11
+
+  if $config.libnativefiledialog_extended.portal
+    cxx.poptions += -DNFD_PORTAL
+
+  if $config.libnativefiledialog_extended.case_sensitive_filter
+    cxx.poptions += -DNFD_CASE_SENSITIVE_FILTER
+
+  if $config.libnativefiledialog_extended.append_extension
+    cxx.poptions += -DNFD_APPEND_EXTENSION
+}
+elif ($cxx.target.class == 'windows')
+{
+  # COM (CoInitializeEx(), CoCreateInstance(), etc.) used by nfd_win.cpp.
+  # MinGW additionally needs uuid.lib's GCC counterpart: unlike MSVC, it
+  # does not pull in the CLSID_*/IID_* GUID definitions on its own.
+  #
+  if ($cxx.target.system == 'mingw32')
+    cxx.libs += -lole32 -luuid
+  else
+    cxx.libs += ole32.lib
+
+  if $config.libnativefiledialog_extended.override_recent_with_default
+    cxx.poptions += -DNFD_OVERRIDE_RECENT_WITH_DEFAULT
+}
+elif ($cxx.target.class == 'macos')
+{
+  c.libs += "-framework" "AppKit"
+
+  if $config.libnativefiledialog_extended.macos_allowed_content_types
+  {
+    c.libs     += "-framework" "UniformTypeIdentifiers"
+    c.poptions += -DNFD_MACOS_ALLOWEDCONTENTTYPES=1
+  }
+  else
+    c.poptions += -DNFD_MACOS_ALLOWEDCONTENTTYPES=0
+}
 
 # Export options.
 #
-lib{nativefiledialog-extended}:
+lib{nfd}:
 {
   cxx.export.poptions = "-I$out_pfx_inc" "-I$src_pfx_inc"
   cxx.export.libs = $intf_libs
 }
 
-#liba{nativefiledialog-extended}: cxx.export.poptions += -DLIBNATIVEFILEDIALOG_EXTENDED_STATIC
-#libs{nativefiledialog-extended}: cxx.export.poptions += -DLIBNATIVEFILEDIALOG_EXTENDED_SHARED
+libs{nfd}: cxx.export.poptions += -DNFD_SHARED
+
+# NFD_PORTAL changes the layout of a public struct (nfdpathsetenum_t), so it
+# must also be visible to consumers of the library.
+#
+if ($cxx.target.class == 'linux' && $config.libnativefiledialog_extended.portal)
+  lib{nfd}: cxx.export.poptions += -DNFD_PORTAL
 
 # For pre-releases use the complete version to make sure they cannot
 # be used in place of another pre-release or the final version. See
 # the version module for details on the version.* variable values.
 #
 if $version.pre_release
-  lib{nativefiledialog-extended}: bin.lib.version = "-$version.project_id"
+  lib{nfd}: bin.lib.version = "-$version.project_id"
 else
-  lib{nativefiledialog-extended}: bin.lib.version = "-$version.major.$version.minor"
+  lib{nfd}: bin.lib.version = "-$version.major.$version.minor"
 
 # Don't install private headers.
 #

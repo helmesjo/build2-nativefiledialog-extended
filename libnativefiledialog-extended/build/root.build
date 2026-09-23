@@ -6,6 +6,13 @@ cxx.std = latest
 
 using cxx
 
+# The nfd_cocoa.m (macOS) backend is Objective-C, and the public C headers
+# use the .h extension, so also load the c module and its Objective-C
+# submodule.
+#
+using c
+using c.objc
+
 hxx{*}: extension = hpp
 ixx{*}: extension = ipp
 txx{*}: extension = tpp
@@ -14,3 +21,25 @@ cxx{*}: extension = cpp
 # The test target for cross-testing (running tests under Wine, etc).
 #
 test.target = $cxx.target
+
+# Linux: use the xdg-desktop-portal/D-Bus backend instead of GTK3.
+#
+config [bool] config.libnativefiledialog_extended.portal ?= false
+
+# Linux: make file filters case-sensitive.
+#
+config [bool] config.libnativefiledialog_extended.case_sensitive_filter ?= false
+
+# Linux: automatically append the file extension to an extensionless
+# selection in the save dialog (mainly relevant to the portal backend).
+#
+config [bool] config.libnativefiledialog_extended.append_extension ?= false
+
+# Windows: use the default path instead of the recent folder.
+#
+config [bool] config.libnativefiledialog_extended.override_recent_with_default ?= false
+
+# macOS: use allowedContentTypes (UniformTypeIdentifiers, macOS >= 11)
+# instead of the deprecated allowedFileTypes for filter lists.
+#
+config [bool] config.libnativefiledialog_extended.macos_allowed_content_types ?= true
