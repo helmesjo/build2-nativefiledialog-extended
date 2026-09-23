@@ -4,15 +4,13 @@ impl_libs = # Implementation dependencies.
 # No third-party dependencies: the platform-specific backends below link
 # only system frameworks/libraries.
 
-# Public headers.
-#
-pub = [dir_path] ../include/
-
-include $pub
-
-pub_hdrs = $($pub/ pub_hdrs)
-
-lib{nfd}: $pub/{$pub_hdrs}
+# Public headers are declared and installed from include/buildfile. They
+# are not also listed as lib{nfd} prerequisites here: the public C++
+# wrapper header (hxx{}) is not a plain C header, and a cc link rule
+# refuses to match a lib{} target that carries a foreign-language header
+# or source among its prerequisites (see libbuild2/cc/link-rule.cxx,
+# link_rule::match, the seen_cc case), which would make the pure
+# Objective-C (m{}) macOS build unmatched by either the c or cxx rule.
 
 # Private headers and platform-specific sources.
 #
@@ -109,19 +107,31 @@ elif ($cxx.target.class == 'macos')
 
 # Export options.
 #
+# Both cxx.export.* and c.export.* are set (identically): on macOS lib{nfd}
+# is a pure Objective-C library (only a c{}/m{}-family compiled member), and
+# a C++ consumer's compile rule only picks up an imported library's search
+# paths and macros through c.export.* in that case.
+#
 lib{nfd}:
 {
   cxx.export.poptions = "-I$out_pfx_inc" "-I$src_pfx_inc"
   cxx.export.libs = $intf_libs
+
+  c.export.poptions = "-I$out_pfx_inc" "-I$src_pfx_inc"
+  c.export.libs = $intf_libs
 }
 
 libs{nfd}: cxx.export.poptions += -DNFD_SHARED
+libs{nfd}: c.export.poptions   += -DNFD_SHARED
 
 # NFD_PORTAL changes the layout of a public struct (nfdpathsetenum_t), so it
 # must also be visible to consumers of the library.
 #
 if ($cxx.target.class == 'linux' && $config.libnativefiledialog_extended.portal)
+{
   lib{nfd}: cxx.export.poptions += -DNFD_PORTAL
+  lib{nfd}: c.export.poptions   += -DNFD_PORTAL
+}
 
 # For pre-releases use the complete version to make sure they cannot
 # be used in place of another pre-release or the final version. See
