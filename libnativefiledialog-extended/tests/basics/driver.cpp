@@ -1,34 +1,17 @@
-#include <sstream>
-#include <stdexcept>
-
-#include <nativefiledialog-extended.hpp>
+#include <nfd.h>
+#include <nfd.hpp>
 
 #undef NDEBUG
 #include <cassert>
 
 int main ()
 {
-  using namespace std;
-  using namespace nativefiledialog_extended;
-
-  // Basics.
+  // Exercise both the C API and the C++ wrapper, which in turn calls the
+  // exported (non-inline) NFD_Init()/NFD_Quit() symbols.
   //
-  {
-    ostringstream o;
-    say_hello (o, "World");
-    assert (o.str () == "Hello, World!\n");
-  }
+  assert (NFD_Init () == NFD_OKAY);
+  NFD_Quit ();
 
-  // Empty name.
-  //
-  try
-  {
-    ostringstream o;
-    say_hello (o, "");
-    assert (false);
-  }
-  catch (const invalid_argument& e)
-  {
-    assert (e.what () == string ("empty name"));
-  }
+  assert (NFD::Init () == NFD_OKAY);
+  NFD::Quit ();
 }
