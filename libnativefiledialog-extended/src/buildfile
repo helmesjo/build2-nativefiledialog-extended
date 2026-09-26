@@ -1,8 +1,20 @@
 intf_libs = # Interface dependencies.
 impl_libs = # Implementation dependencies.
 
-# No third-party dependencies: the platform-specific backends below link
-# only system frameworks/libraries.
+# D-Bus and wayland-client only have private (link-time-only) Requires in
+# their own .pc files, so build2's native installed-library import (which
+# reads a single .pc file's Cflags/Libs but does not resolve Requires:)
+# covers them fully. GTK3 does not qualify (see below) and is discovered
+# via the pkg-config tool instead, further down in this file.
+#
+if ($cxx.target.class == 'linux')
+{
+  if $config.libnativefiledialog_extended.portal
+    import impl_libs += dbus-1%lib{dbus-1}
+
+  if $config.libnativefiledialog_extended.wayland
+    import impl_libs += wayland-client%lib{wayland-client}
+}
 
 # Public headers are declared and installed from include/buildfile. They
 # are not also listed as lib{nfd} prerequisites here: the public C++
@@ -61,33 +73,27 @@ objs{*}: c.poptions   += -DNFD_EXPORT
 
 if ($cxx.target.class == 'linux')
 {
-  # GTK3 (default) or D-Bus (xdg-desktop-portal), discovered via pkg-config
-  # since neither has a corresponding build2 package.
+  # GTK3's own .pc file has a real Requires: chain (gdk-3.0, atk, cairo,
+  # cairo-gobject, gdk-pixbuf-2.0, gio-2.0, ...), which build2's native
+  # import (above) does not resolve, so discover it via the pkg-config
+  # tool itself instead. There is no corresponding build2 package for it.
   #
-  if $config.libnativefiledialog_extended.portal
-    nfd_pkg = dbus-1
-  else
-    nfd_pkg = gtk+-3.0
-
-  cxx.poptions += $regex.split($process.run(pkg-config --cflags $nfd_pkg), '\s+', '')
-  cxx.libs     += $regex.split($process.run(pkg-config --libs   $nfd_pkg), '\s+', '')
+  if (!$config.libnativefiledialog_extended.portal)
+  {
+    cxx.poptions += $regex.split($process.run(pkg-config --cflags gtk+-3.0), '\s+', '')
+    cxx.libs     += $regex.split($process.run(pkg-config --libs   gtk+-3.0), '\s+', '')
+  }
 
   # Support X11 window handles for setting the dialog's parent window.
   #
   cxx.poptions += -DNFD_X11
 
   # Support Wayland window handles too (xdg-foreign protocol), regardless
-  # of the GTK/portal backend choice above. Optional since it requires a
-  # separate wayland-client pkg-config lookup that some build hosts may
-  # not have.
+  # of the GTK/portal backend choice above. Optional since some build
+  # hosts may not have wayland-client (see the import above).
   #
   if $config.libnativefiledialog_extended.wayland
-  {
     cxx.poptions += -DNFD_WAYLAND
-    cxx.poptions += $regex.split($process.run(pkg-config --cflags wayland-client), '\s+', '')
-    c.poptions   += $regex.split($process.run(pkg-config --cflags wayland-client), '\s+', '')
-    cxx.libs     += $regex.split($process.run(pkg-config --libs   wayland-client), '\s+', '')
-  }
 
   if $config.libnativefiledialog_extended.portal
     cxx.poptions += -DNFD_PORTAL
