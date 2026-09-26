@@ -1,6 +1,31 @@
-libs =
-#import libs += libhello%lib{hello}
+import libs = glfw%lib{glfw}
+import libs += libnativefiledialog-extended%lib{nfd}
 
-exe{libnativefiledialog-extended-examples}: {h c}{**} $libs testscript
+exe{test_glfw}: c{test_glfw} $libs
 
-c.poptions =+ "-I$out_root" "-I$src_root"
+if ($c.target.class == 'windows')
+{
+  c.poptions += -DGLFW_EXPOSE_NATIVE_WIN32
+
+  if ($c.target.system == 'mingw32')
+    c.libs += -lopengl32
+  else
+    c.libs += opengl32.lib
+}
+elif ($c.target.class == 'macos')
+{
+  c.poptions += -DGLFW_EXPOSE_NATIVE_COCOA
+  c.libs     += "-framework" "OpenGL"
+}
+elif ($c.target.class == 'linux')
+{
+  c.poptions += -DGLFW_EXPOSE_NATIVE_X11 -DGLFW_EXPOSE_NATIVE_WAYLAND
+  c.poptions += $regex.split($process.run(pkg-config --cflags gl), '\s+', '')
+  c.libs     += $regex.split($process.run(pkg-config --libs   gl), '\s+', '')
+}
+
+# Pops a real OS dialog and a real window, and needs a human click to
+# proceed, so it is built (to keep it compiling) but never run
+# automatically.
+#
+exe{test_glfw}: test = false

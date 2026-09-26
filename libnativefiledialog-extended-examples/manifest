@@ -28,3 +28,12 @@ glfw ^3.4.0
   }
 }
 \
+
+# Upstream's test_glfw.c declares WinMain(void) (no arguments), which
+# conflicts with the real WinMain prototype pulled in transitively by
+# <windows.h> once glfw3native.h includes it. Only MSVC's cl.exe tolerates
+# this; MinGW GCC, MinGW Clang, and clang-cl all reject it as a hard
+# type-conflict error (verified locally against all three).
+#
+build-include: windows_10*-msvc_**
+build-exclude: windows** ; MinGW GCC, MinGW Clang, and clang-cl reject upstream's WinMain(void) declaration.
