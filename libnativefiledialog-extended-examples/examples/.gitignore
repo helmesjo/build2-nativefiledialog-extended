@@ -1,0 +1,5 @@
+libnativefiledialog-extended-examples
+
+# Testscript output directory (can be symlink).
+#
+test-libnativefiledialog-extended-examples
