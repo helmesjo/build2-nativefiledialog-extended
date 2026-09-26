@@ -62,8 +62,8 @@ if ($cxx.target.class == 'linux')
   else
     nfd_pkg = gtk+-3.0
 
-  cxx.poptions += $process.run_regex(pkg-config --cflags $nfd_pkg, '(\S+)', '\1')
-  cxx.libs     += $process.run_regex(pkg-config --libs   $nfd_pkg, '(\S+)', '\1')
+  cxx.poptions += $regex.split($process.run(pkg-config --cflags $nfd_pkg), '\s+', '')
+  cxx.libs     += $regex.split($process.run(pkg-config --libs   $nfd_pkg), '\s+', '')
 
   # Support X11 window handles for setting the dialog's parent window.
   #
