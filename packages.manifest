@@ -1,2 +1,5 @@
 : 1
 location: libnativefiledialog-extended/
+
+:
+location: libnativefiledialog-extended-examples/
