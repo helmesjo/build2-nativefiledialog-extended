@@ -26,6 +26,11 @@ test.target = $cxx.target
 #
 config [bool] config.libnativefiledialog_extended.portal ?= false
 
+# Linux: support Wayland window handles (in addition to X11), matching
+# upstream's own default. Disable if the build host lacks wayland-client.
+#
+config [bool] config.libnativefiledialog_extended.wayland ?= true
+
 # Linux: make file filters case-sensitive.
 #
 config [bool] config.libnativefiledialog_extended.case_sensitive_filter ?= false

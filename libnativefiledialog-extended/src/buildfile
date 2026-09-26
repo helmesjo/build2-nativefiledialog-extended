@@ -16,6 +16,13 @@ impl_libs = # Implementation dependencies.
 #
 lib{nfd}: hxx{nfd_linux_shared}: include = ($cxx.target.class == 'linux')
 
+# Generated Wayland xdg-foreign protocol code (see src/xdg-foreign-unstable-v1.h
+# for provenance), needed only when Wayland window handle support is enabled.
+#
+lib{nfd}: h{xdg-foreign-unstable-v1} c{xdg-foreign-unstable-v1}: \
+  include = ($cxx.target.class == 'linux' && \
+             $config.libnativefiledialog_extended.wayland)
+
 lib{nfd}: cxx{nfd_win}:    include = ($cxx.target.class == 'windows')
 lib{nfd}: cxx{nfd_gtk}:    include = ($cxx.target.class == 'linux' && !$config.libnativefiledialog_extended.portal)
 lib{nfd}: cxx{nfd_portal}: include = ($cxx.target.class == 'linux' &&  $config.libnativefiledialog_extended.portal)
@@ -68,6 +75,19 @@ if ($cxx.target.class == 'linux')
   # Support X11 window handles for setting the dialog's parent window.
   #
   cxx.poptions += -DNFD_X11
+
+  # Support Wayland window handles too (xdg-foreign protocol), regardless
+  # of the GTK/portal backend choice above. Optional since it requires a
+  # separate wayland-client pkg-config lookup that some build hosts may
+  # not have.
+  #
+  if $config.libnativefiledialog_extended.wayland
+  {
+    cxx.poptions += -DNFD_WAYLAND
+    cxx.poptions += $regex.split($process.run(pkg-config --cflags wayland-client), '\s+', '')
+    c.poptions   += $regex.split($process.run(pkg-config --cflags wayland-client), '\s+', '')
+    cxx.libs     += $regex.split($process.run(pkg-config --libs   wayland-client), '\s+', '')
+  }
 
   if $config.libnativefiledialog_extended.portal
     cxx.poptions += -DNFD_PORTAL
@@ -144,4 +164,4 @@ else
 
 # Don't install private headers.
 #
-{hxx ixx txx}{*}: install = false
+{h hxx ixx txx}{*}: install = false
