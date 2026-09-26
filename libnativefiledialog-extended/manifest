@@ -13,3 +13,4 @@ package-url: https://github.com/build2-packaging/nativefiledialog-extended
 package-email: fred.helmesjo@qualisys.se
 depends: * build2 >= 0.18.0
 depends: * bpkg >= 0.18.0
+examples: libnativefiledialog-extended-examples == $

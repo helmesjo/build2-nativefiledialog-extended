@@ -1,16 +1,30 @@
 : 1
 name: libnativefiledialog-extended-examples
-version: 0.1.0-a.0.z
-type: exe
+version: 1.4.0-a.0.z
+type: examples
 language: c
-project: build2-nativefiledialog-extended
-summary: Native File Dialog Extended
-license: other: proprietary ; Not free/open source.
+project: nativefiledialog-extended
+summary: Cross-platform native file open/save/folder dialogs (examples)
+license: Zlib
 description-file: README.md
 package-description-file: PACKAGE-README.md
-url: https://example.org/upstream
-email: upstream@example.org
-package-url: https://github.com/build2-packaging/build2-nativefiledialog-extended
-package-email: packaging@build2.org ; Mailing list.
+url: https://github.com/btzy/nativefiledialog-extended
+email: btzy1996@hotmail.com
+package-url: https://github.com/build2-packaging/nativefiledialog-extended
+package-email: fred.helmesjo@qualisys.se
 depends: * build2 >= 0.18.0
 depends: * bpkg >= 0.18.0
+depends:
+\
+glfw ^3.4.0
+{
+  require
+  {
+    if ($c.target.class == 'linux')
+    {
+      config.glfw.build_x11 = true
+      config.glfw.build_wayland = true
+    }
+  }
+}
+\
