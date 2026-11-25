@@ -15,3 +15,28 @@ package-url: https://github.com/build2-packaging/nativefiledialog-extended
 package-email: packaging@build2.org ; Mailing list.
 depends: * build2 >= 0.18.0
 depends: * bpkg >= 0.18.0
+
+requires: ; System GTK3 or D-Bus, and wayland-client on Linux and BSD.
+requires: clang ? ($cxx.target.class == 'macos') ; AppKit headers require Clang.
+
+# On CI, Linux is only built in the sys configurations below, which install
+# these as system packages.
+#
+builds: -linux -freebsd ; Requires system GTK3 or D-Bus.
+build-exclude: macos*-gcc** ; AppKit headers require Clang.
+
+debian-gtk-builds: sys : -static ; No static GTK3 system library.
+debian-gtk-build-include: linux_debian*-**
+debian-gtk-build-include: linux_ubuntu*-**
+debian-gtk-build-exclude: **
+debian-gtk-build-config: sys:libgtk-3
+
+fedora-portal-builds: sys : -static ; No static D-Bus system library.
+fedora-portal-build-include: linux_fedora*-**
+fedora-portal-build-exclude: **
+fedora-portal-build-config:
+\
+config.libnativefiledialog_extended.portal=true
+sys:libdbus
+sys:libwayland
+\
