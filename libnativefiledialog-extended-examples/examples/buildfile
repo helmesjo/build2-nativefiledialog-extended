@@ -1,6 +1,25 @@
-libs =
-#import libs += libhello%lib{hello}
+import libs = glfw%lib{glfw}
+import libs += libopengl-meta%lib{opengl-gl}
+import libs += libnativefiledialog-extended%lib{nfd}
 
-exe{libnativefiledialog-extended-examples}: {h c}{**} $libs testscript
+exe{test_glfw}: c{test_glfw} $libs
 
-c.poptions =+ "-I$out_root" "-I$src_root"
+# The native window handle that test_glfw.c passes to the dialogs (see
+# upstream nfd_glfw3.h). On Linux and BSD glfw is built with X11 support
+# only (see manifest).
+#
+switch $c.target.class
+{
+  case 'windows'
+    c.poptions += -DGLFW_EXPOSE_NATIVE_WIN32
+  case 'macos'
+    c.poptions += -DGLFW_EXPOSE_NATIVE_COCOA
+  case 'linux' | 'bsd'
+    c.poptions += -DGLFW_EXPOSE_NATIVE_X11
+}
+
+# Pops a real OS dialog and a real window, and needs a human click to
+# proceed, so it is built (to keep it compiling) but never run
+# automatically.
+#
+exe{test_glfw}: test = false

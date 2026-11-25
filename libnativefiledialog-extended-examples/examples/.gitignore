@@ -1,5 +1,5 @@
-libnativefiledialog-extended-examples
+test_glfw
 
 # Testscript output directory (can be symlink).
 #
-test-libnativefiledialog-extended-examples
+test-test_glfw
