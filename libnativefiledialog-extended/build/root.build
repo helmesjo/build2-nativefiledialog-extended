@@ -6,6 +6,13 @@ cxx.std = latest
 
 using cxx
 
+# The nfd_cocoa.m (macOS) backend is Objective-C, and the public C headers
+# use the .h extension, so also load the c module and its Objective-C
+# submodule.
+#
+using c
+using c.objc
+
 hxx{*}: extension = hpp
 ixx{*}: extension = ipp
 txx{*}: extension = tpp
@@ -14,3 +21,46 @@ cxx{*}: extension = cpp
 # The test target for cross-testing (running tests under Wine, etc).
 #
 test.target = $cxx.target
+
+# Upstream builds its GTK3 and xdg-desktop-portal backends on every non-Apple
+# UNIX, so the Linux options below apply to BSD as well. All the options
+# mirror the upstream CMake options of the same name (NFD_PORTAL, NFD_X11,
+# etc.) and default to upstream's values on the targets they apply to.
+#
+linux_bsd = ($cxx.target.class == 'linux' || $cxx.target.class == 'bsd')
+
+# Linux and BSD: use the xdg-desktop-portal backend, which requires D-Bus
+# (dbus-1), instead of the GTK3 backend, which requires GTK3 (gtk+-3.0).
+#
+config [bool] config.libnativefiledialog_extended.portal ?= false
+
+# Linux and BSD: support X11 parent window handles.
+#
+config [bool] config.libnativefiledialog_extended.x11 ?= $linux_bsd
+
+# Linux and BSD: support Wayland parent window handles, which requires
+# wayland-client.
+#
+config [bool] config.libnativefiledialog_extended.wayland ?= $linux_bsd
+
+# Linux and BSD: make file filters case-sensitive.
+#
+config [bool] config.libnativefiledialog_extended.case_sensitive_filter ?= false
+
+# Linux and BSD: automatically append the file extension to an extensionless
+# selection in the save dialog (only used by the portal backend).
+#
+config [bool] config.libnativefiledialog_extended.append_extension ?= false
+
+# Windows: use the default path instead of the recent folder.
+#
+config [bool] \
+  config.libnativefiledialog_extended.override_recent_with_default ?= false
+
+# macOS: use allowedContentTypes (UniformTypeIdentifiers) instead of the
+# deprecated allowedFileTypes for filter lists if the deployment target is
+# macOS 11 or later.
+#
+config [bool] \
+  config.libnativefiledialog_extended.use_allowedcontenttypes_if_available ?= \
+  ($cxx.target.class == 'macos')

@@ -1,20 +1,69 @@
 intf_libs = # Interface dependencies.
 impl_libs = # Implementation dependencies.
-#import xxxx_libs += libhello%lib{hello}
 
-# Public headers.
+# Linux and BSD backend and windowing system support (see build/root.build).
 #
-pub = [dir_path] ../include/
+portal  = ($linux_bsd && $config.libnativefiledialog_extended.portal)
+gtk     = ($linux_bsd && !$config.libnativefiledialog_extended.portal)
+x11     = ($linux_bsd && $config.libnativefiledialog_extended.x11)
+wayland = ($linux_bsd && $config.libnativefiledialog_extended.wayland)
 
-include $pub
-
-pub_hdrs = $($pub/ pub_hdrs)
-
-lib{nativefiledialog-extended}: $pub/{$pub_hdrs}
-
-# Private headers and sources as well as dependencies.
+# GTK3, D-Bus and wayland-client are imported as installed system libraries
+# (with their options read from their gtk+-3.0.pc, dbus-1.pc and
+# wayland-client.pc files) since there are no build2 packages for them. Only
+# their shared variants are imported since distributions usually ship no
+# static ones.
 #
-lib{nativefiledialog-extended}: {hxx ixx txx cxx}{**} $impl_libs $intf_libs
+if $gtk
+  import impl_libs += gtk+-3.0%libs{gtk-3}
+
+if $portal
+  import impl_libs += dbus-1%libs{dbus-1}
+
+if $wayland
+  import impl_libs += wayland-client%libs{wayland-client}
+
+# Public headers are declared and installed from include/buildfile. They
+# are not also listed as lib{nfd} prerequisites here: the public C++
+# wrapper header (hxx{}) is not a plain C header, and a cc link rule
+# refuses to match a lib{} target that carries a foreign-language header
+# or source among its prerequisites (see libbuild2/cc/link-rule.cxx,
+# link_rule::match, the seen_cc case), which would make the pure
+# Objective-C (m{}) macOS build unmatched by either the c or cxx rule.
+
+# Private headers and platform-specific sources.
+#
+lib{nfd}: hxx{nfd_linux_shared}: include = $linux_bsd
+
+# Wayland xdg-foreign protocol code, generated from the upstream protocol
+# definition with the system wayland-scanner (which comes with the
+# wayland-client development files), needed only when Wayland window handle
+# support is enabled.
+#
+lib{nfd}: h{xdg-foreign-unstable-v1} c{xdg-foreign-unstable-v1}: \
+  include = $wayland
+
+if $wayland
+  import! wayland_scanner = wayland-scanner%exe{wayland-scanner}
+
+h{xdg-foreign-unstable-v1}: file{xdg-foreign-unstable-v1.xml} $wayland_scanner
+{{
+  diag wayland-scanner ($>)
+  $wayland_scanner client-header $path($<[0]) $path($>)
+}}
+
+c{xdg-foreign-unstable-v1}: file{xdg-foreign-unstable-v1.xml} $wayland_scanner
+{{
+  diag wayland-scanner ($>)
+  $wayland_scanner private-code $path($<[0]) $path($>)
+}}
+
+lib{nfd}: cxx{nfd_win}:    include = ($cxx.target.class == 'windows')
+lib{nfd}: cxx{nfd_gtk}:    include = $gtk
+lib{nfd}: cxx{nfd_portal}: include = $portal
+lib{nfd}: m{nfd_cocoa}:    include = ($cxx.target.class == 'macos')
+
+lib{nfd}: $impl_libs $intf_libs
 
 # Build options.
 #
@@ -25,30 +74,112 @@ src_pfx_src = [dir_path] $src_root/src/
 
 cxx.poptions =+ "-I$out_pfx_src" "-I$src_pfx_src" \
                 "-I$out_pfx_inc" "-I$src_pfx_inc"
+c.poptions   =+ "-I$out_pfx_src" "-I$src_pfx_src" \
+                "-I$out_pfx_inc" "-I$src_pfx_inc"
 
-#obja{*}: cxx.poptions += -DLIBNATIVEFILEDIALOG_EXTENDED_STATIC_BUILD
-#objs{*}: cxx.poptions += -DLIBNATIVEFILEDIALOG_EXTENDED_SHARED_BUILD
+# NFD has no C++/ObjC runtime requirements, so disable exceptions and RTTI to
+# match upstream's own build (see upstream src/CMakeLists.txt).
+#
+if ($cxx.class == 'gcc' || $cxx.class == 'clang')
+{
+  cxx.coptions += -fno-exceptions -fno-rtti
+  c.coptions   += -fno-exceptions
+}
+elif ($cxx.class == 'msvc')
+  cxx.coptions += /EHs-c- /GR-
+
+# NFD provides its own symbol-export macros: NFD_EXPORT while building the
+# shared library, NFD_SHARED for its consumers (see include/nfd.h).
+#
+objs{*}: cxx.poptions += -DNFD_EXPORT
+objs{*}: c.poptions   += -DNFD_EXPORT
+
+if $linux_bsd
+{
+  if $portal
+    cxx.poptions += -DNFD_PORTAL
+
+  # Support X11 and/or Wayland (xdg-foreign protocol) parent window handles,
+  # with either backend.
+  #
+  if $x11
+    cxx.poptions += -DNFD_X11
+
+  if $wayland
+    cxx.poptions += -DNFD_WAYLAND
+
+  if $config.libnativefiledialog_extended.case_sensitive_filter
+    cxx.poptions += -DNFD_CASE_SENSITIVE_FILTER
+
+  if $config.libnativefiledialog_extended.append_extension
+    cxx.poptions += -DNFD_APPEND_EXTENSION
+}
+elif ($cxx.target.class == 'windows')
+{
+  # COM (CoInitializeEx(), CoCreateInstance(), etc.), the CLSID_* and IID_*
+  # definitions (uuid), and SHCreateItemFromParsingName() (shell32) used by
+  # nfd_win.cpp.
+  #
+  if ($cxx.target.system == 'mingw32')
+    cxx.libs += -lole32 -luuid -lshell32
+  else
+    cxx.libs += ole32.lib uuid.lib shell32.lib
+
+  if $config.libnativefiledialog_extended.override_recent_with_default
+    cxx.poptions += -DNFD_OVERRIDE_RECENT_WITH_DEFAULT
+}
+elif ($cxx.target.class == 'macos')
+{
+  c.libs += "-framework" "AppKit"
+
+  # Leave NFD_MACOS_ALLOWEDCONTENTTYPES undefined for nfd_cocoa.m to use
+  # allowedContentTypes only if the deployment target is macOS 11 or later.
+  # UniformTypeIdentifiers is then weakly linked since it does not exist on
+  # earlier versions.
+  #
+  if $config.libnativefiledialog_extended.use_allowedcontenttypes_if_available
+    c.libs += -Wl,-weak_framework,UniformTypeIdentifiers
+  else
+    c.poptions += -DNFD_MACOS_ALLOWEDCONTENTTYPES=0
+}
 
 # Export options.
 #
-lib{nativefiledialog-extended}:
+# Both cxx.export.* and c.export.* are set (identically): on macOS lib{nfd}
+# is a pure Objective-C library (only a c{}/m{}-family compiled member), and
+# a C++ consumer's compile rule only picks up an imported library's search
+# paths and macros through c.export.* in that case.
+#
+lib{nfd}:
 {
   cxx.export.poptions = "-I$out_pfx_inc" "-I$src_pfx_inc"
   cxx.export.libs = $intf_libs
+
+  c.export.poptions = "-I$out_pfx_inc" "-I$src_pfx_inc"
+  c.export.libs = $intf_libs
 }
 
-#liba{nativefiledialog-extended}: cxx.export.poptions += -DLIBNATIVEFILEDIALOG_EXTENDED_STATIC
-#libs{nativefiledialog-extended}: cxx.export.poptions += -DLIBNATIVEFILEDIALOG_EXTENDED_SHARED
+# NFD_PORTAL changes the layout of a public struct (nfdpathsetenum_t), so it
+# must also be visible to consumers of the library.
+#
+if $portal
+{
+  lib{nfd}: cxx.export.poptions += -DNFD_PORTAL
+  lib{nfd}: c.export.poptions   += -DNFD_PORTAL
+}
+
+libs{nfd}: cxx.export.poptions += -DNFD_SHARED
+libs{nfd}: c.export.poptions   += -DNFD_SHARED
 
 # For pre-releases use the complete version to make sure they cannot
 # be used in place of another pre-release or the final version. See
 # the version module for details on the version.* variable values.
 #
 if $version.pre_release
-  lib{nativefiledialog-extended}: bin.lib.version = "-$version.project_id"
+  lib{nfd}: bin.lib.version = "-$version.project_id"
 else
-  lib{nativefiledialog-extended}: bin.lib.version = "-$version.major.$version.minor"
+  lib{nfd}: bin.lib.version = "-$version.major.$version.minor"
 
 # Don't install private headers.
 #
-{hxx ixx txx}{*}: install = false
+{h hxx ixx txx}{*}: install = false
