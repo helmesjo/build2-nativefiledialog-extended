@@ -32,6 +32,4 @@ requires: clang ? ($c.target.class == 'macos') ; glfw requires Clang on macOS.
 
 builds: -linux -freebsd ; The library requires system GTK3 or D-Bus.
 
-build-include: windows_10*-msvc_**
-build-exclude: windows** ; Only MSVC accepts upstream's WinMain(void).
 build-exclude: macos*-gcc** ; glfw requires Clang on macOS.

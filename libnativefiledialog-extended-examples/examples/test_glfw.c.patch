@@ -1,0 +1,11 @@
+--- test_glfw.c.orig	2026-11-25 13:57:35 +0100
++++ test_glfw.c	2026-11-25 15:11:23 +0100
+@@ -94,7 +94,7 @@
+ }
+ 
+ #ifdef _WIN32
+-int __stdcall WinMain(void)
++int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+ #else
+ int main(void)
+ #endif
