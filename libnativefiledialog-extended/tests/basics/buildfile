@@ -1,3 +1,4 @@
-import libs = libnativefiledialog-extended%lib{nativefiledialog-extended}
+import libs = libnativefiledialog-extended%lib{nfd}
 
-exe{driver}: {hxx ixx txx cxx}{**} $libs testscript{**}
+./: exe{driver}:     c{driver}       $libs
+./: exe{driver_cpp}: cxx{driver_cpp} $libs
