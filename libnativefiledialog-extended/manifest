@@ -4,7 +4,7 @@ version: 1.4.1-a.0.z
 language: c++
 project: nativefiledialog-extended
 summary: Cross-platform native file open/save/folder dialogs
-license: Zlib ; zlib License.
+license: Zlib AND MIT ; zlib License, MIT for the Wayland protocol.
 topics: file dialog, file chooser, graphical user interface, desktop integration
 keywords: nfd gtk portal cocoa gui
 description-file: README.md
