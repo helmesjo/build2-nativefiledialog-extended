@@ -1,0 +1,17 @@
+import libs = libnativefiledialog-extended%lib{nfd}
+
+./: exe{test_opendialog}:                     c{test_opendialog} $libs
+./: exe{test_opendialog_cpp}:                 cxx{test_opendialog_cpp} $libs
+./: exe{test_opendialog_native}:              c{test_opendialog_native} $libs
+./: exe{test_opendialog_native_with}:         c{test_opendialog_native_with} $libs
+./: exe{test_opendialog_with}:                c{test_opendialog_with} $libs
+./: exe{test_opendialogmultiple}:             c{test_opendialogmultiple} $libs
+./: exe{test_opendialogmultiple_cpp}:         cxx{test_opendialogmultiple_cpp} $libs
+./: exe{test_opendialogmultiple_enum}:        c{test_opendialogmultiple_enum} $libs
+./: exe{test_opendialogmultiple_enum_native}: c{test_opendialogmultiple_enum_native} $libs
+./: exe{test_opendialogmultiple_native}:      c{test_opendialogmultiple_native} $libs
+
+# These pop a real OS dialog and need a human click to proceed, so they
+# are built (to keep them compiling) but never run automatically.
+#
+exe{*}: test = false

@@ -1,0 +1,11 @@
+import libs = libnativefiledialog-extended%lib{nfd}
+
+./: exe{test_savedialog}:             c{test_savedialog} $libs
+./: exe{test_savedialog_native}:      c{test_savedialog_native} $libs
+./: exe{test_savedialog_native_with}: c{test_savedialog_native_with} $libs
+./: exe{test_savedialog_with}:        c{test_savedialog_with} $libs
+
+# These pop a real OS dialog and need a human click to proceed, so they
+# are built (to keep them compiling) but never run automatically.
+#
+exe{*}: test = false

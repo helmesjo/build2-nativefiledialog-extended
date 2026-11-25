@@ -1,0 +1,14 @@
+import libs = libnativefiledialog-extended%lib{nfd}
+
+./: exe{test_pickfolder}:                c{test_pickfolder} $libs
+./: exe{test_pickfolder_cpp}:            cxx{test_pickfolder_cpp} $libs
+./: exe{test_pickfolder_native}:         c{test_pickfolder_native} $libs
+./: exe{test_pickfolder_native_with}:    c{test_pickfolder_native_with} $libs
+./: exe{test_pickfolder_with}:           c{test_pickfolder_with} $libs
+./: exe{test_pickfoldermultiple}:        c{test_pickfoldermultiple} $libs
+./: exe{test_pickfoldermultiple_native}: c{test_pickfoldermultiple_native} $libs
+
+# These pop a real OS dialog and need a human click to proceed, so they
+# are built (to keep them compiling) but never run automatically.
+#
+exe{*}: test = false

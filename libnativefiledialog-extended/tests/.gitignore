@@ -2,6 +2,7 @@
 #
 driver
 driver_cpp
+test_*
 
 # Testscript output directories (can be symlinks).
 #
