@@ -18,6 +18,12 @@ switch $c.target.class
     c.poptions += -DGLFW_EXPOSE_NATIVE_X11
 }
 
+# Silence the deprecation warnings that the macOS OpenGL headers issue for
+# the gl*() calls in test_glfw.c (OpenGL is deprecated since macOS 10.14).
+#
+if ($c.target.class == 'macos')
+  c.poptions += -DGL_SILENCE_DEPRECATION
+
 # Pops a real OS dialog and a real window, and needs a human click to
 # proceed, so it is built (to keep it compiling) but never run
 # automatically.
