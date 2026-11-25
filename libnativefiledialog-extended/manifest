@@ -15,6 +15,7 @@ package-url: https://github.com/build2-packaging/nativefiledialog-extended
 package-email: packaging@build2.org ; Mailing list.
 depends: * build2 >= 0.18.0
 depends: * bpkg >= 0.18.0
+examples: libnativefiledialog-extended-examples == $
 
 requires: ; System GTK3 or D-Bus, and wayland-client on Linux and BSD.
 requires: clang ? ($cxx.target.class == 'macos') ; AppKit headers require Clang.

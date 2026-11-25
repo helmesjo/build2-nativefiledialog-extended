@@ -1,16 +1,37 @@
 : 1
 name: libnativefiledialog-extended-examples
-version: 0.1.0-a.0.z
+version: 1.4.1-a.0.z
 type: exe
 language: c
-project: build2-nativefiledialog-extended
-summary: Native File Dialog Extended
-license: other: proprietary ; Not free/open source.
+project: nativefiledialog-extended
+summary: Cross-platform native file open/save/folder dialogs (examples)
+license: Zlib ; zlib License.
 description-file: README.md
 package-description-file: PACKAGE-README.md
-url: https://example.org/upstream
-email: upstream@example.org
-package-url: https://github.com/build2-packaging/build2-nativefiledialog-extended
+url: https://github.com/btzy/nativefiledialog-extended
+email: btzy1996@hotmail.com
+package-url: https://github.com/build2-packaging/nativefiledialog-extended
 package-email: packaging@build2.org ; Mailing list.
 depends: * build2 >= 0.18.0
 depends: * bpkg >= 0.18.0
+depends:
+\
+glfw ^3.4.0
+{
+  prefer
+  {
+    config.glfw.build_x11 = $regex.match($c.target.class, 'linux|bsd')
+  }
+
+  accept ($config.glfw.build_x11 == $regex.match($c.target.class, 'linux|bsd'))
+}
+\
+depends: libopengl-meta ^1.0.0 ; Platform GL library.
+
+requires: clang ? ($c.target.class == 'macos') ; glfw requires Clang on macOS.
+
+builds: -linux -freebsd ; The library requires system GTK3 or D-Bus.
+
+build-include: windows_10*-msvc_**
+build-exclude: windows** ; Only MSVC accepts upstream's WinMain(void).
+build-exclude: macos*-gcc** ; glfw requires Clang on macOS.
